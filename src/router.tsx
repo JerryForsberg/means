@@ -8,7 +8,6 @@ import { Navigate } from 'react-router';
 export const router = createBrowserRouter([
     {
         path: '/',
-        index: true,
         element: <LandingPage />,
     },
     {
