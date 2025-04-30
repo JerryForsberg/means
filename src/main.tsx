@@ -12,7 +12,7 @@ createRoot(document.getElementById('root')!).render(
       domain={import.meta.env.VITE_AUTH0_DOMAIN}
       clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
       authorizationParams={{
-        redirect_uri: window.location.origin,
+        redirect_uri: import.meta.env.VITE_AUTH0_CALLBACK_URL,
         audience: import.meta.env.VITE_AUTH0_AUDIENCE, // Optional, if using access tokens
       }}>
       <RouterProvider router={router} />
