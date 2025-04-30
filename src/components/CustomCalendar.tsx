@@ -1,112 +1,26 @@
 // CustomCalendar.tsx
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, useMemo, FormEvent } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Transaction, TransactionType, IntervalType, EventsMap, TotalsMap, EditingTransaction } from '../types';
+import { Transaction, TransactionType, IntervalType, EventsMap, TotalsMap, EditingTransaction, NewTransactionInput } from '../types';
 import DateModal from './DateModal';
+import { createTransaction, deleteTransaction, getAllTransactions, updateTransaction } from '../utils/api'; // Assuming you have an API utility to fetch transactions
 
 const CustomCalendar: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    const [events, setEvents] = useState<EventsMap>({});
-    const [cumulativeTotals, setCumulativeTotals] = useState<TotalsMap>({});
     const [editingTransaction, setEditingTransaction] = useState<EditingTransaction | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const handleDateChange = (date: Date | null) => {
-        if (
-            !selectedDate ||
-            date?.toISOString().split('T')[0] !== selectedDate.toISOString().split('T')[0]
-        ) {
-            setSelectedDate(date);
-        }
-
-        setIsModalOpen(true); // always open
+        setSelectedDate(date);
+        setIsModalOpen(true);
     };
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
-        setSelectedDate(null); // ✅ reset
-    };
-
-    const updateEvents = (updater: EventsMap | ((prev: EventsMap) => EventsMap)) => {
-        setEvents((prev) => {
-            const updatedEvents = typeof updater === 'function' ? updater(prev) : updater;
-            const updatedCumulativeTotals = calculateCumulativeTotals(updatedEvents);
-            setCumulativeTotals(updatedCumulativeTotals);
-            return updatedEvents;
-        });
-    };
-
-    useEffect(() => {
-        const savedEvents = localStorage.getItem('calendarEvents');
-        const savedTotals = localStorage.getItem('cumulativeTotals');
-        if (savedEvents) setEvents(JSON.parse(savedEvents));
-        if (savedTotals) setCumulativeTotals(JSON.parse(savedTotals));
-    }, []);
-
-    useEffect(() => {
-        localStorage.setItem('calendarEvents', JSON.stringify(events));
-        localStorage.setItem('cumulativeTotals', JSON.stringify(cumulativeTotals));
-    }, [events, cumulativeTotals]);
-
-    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const form = e.currentTarget;
-        if (!selectedDate) return;
-
-        const description = (form.description as HTMLInputElement).value;
-        const type = (form.type as HTMLSelectElement).value as TransactionType;
-        const amount = parseFloat((form.amount as HTMLInputElement).value) || 0;
-        const isRecurring = (form.isRecurring as HTMLInputElement).checked;
-        const intervalValue = parseInt((form.intervalValue as HTMLInputElement).value, 10) || 1;
-        const intervalType = (form.intervalType as HTMLSelectElement).value as IntervalType;
-        const key = selectedDate.toISOString().split('T')[0];
-
-        const newTransaction: Transaction = {
-            id: editingTransaction ? editingTransaction.id : Date.now(),
-            description,
-            type,
-            amount,
-            isRecurring,
-            interval: { value: intervalValue, type: intervalType },
-            timestamp: new Date().toISOString(),
-        };
-
-        updateEvents((prev) => {
-            const updatedEvents = { ...prev };
-            if (editingTransaction) {
-                const transactionDateKey = editingTransaction.dateKey;
-                updatedEvents[transactionDateKey] = updatedEvents[transactionDateKey].map((t) =>
-                    t.id === editingTransaction.id ? newTransaction : t
-                );
-            } else {
-                updatedEvents[key] = [...(updatedEvents[key] || []), newTransaction];
-            }
-            return updatedEvents;
-        });
-
-        setEditingTransaction(null);
-        form.reset();
-    };
-
-    const handleEditTransaction = (dateKey: string, transaction: Transaction) => {
-        setEditingTransaction({ ...transaction, dateKey });
-        setSelectedDate(new Date(dateKey));
-    };
-
-    const handleRemoveTransaction = (dateKey: string, transactionId: number) => {
-        updateEvents((prev) => {
-            const updatedEvents = {
-                ...prev,
-                [dateKey]: prev[dateKey].filter((t) => t.id !== transactionId),
-            };
-            if (updatedEvents[dateKey].length === 0) delete updatedEvents[dateKey];
-            return updatedEvents;
-        });
-    };
-
-    const calculateDayTotal = (transactions: Transaction[]) => {
-        return transactions.reduce((total, t) => total + (t.type === 'income' ? t.amount : -t.amount), 0);
+        setSelectedDate(null);
     };
 
     const generateDateRange = (startDate: Date, endDate: Date): string[] => {
@@ -119,29 +33,33 @@ const CustomCalendar: React.FC = () => {
         return dates;
     };
 
-    const calculateCumulativeTotals = (updatedEvents: EventsMap = events): TotalsMap => {
-        const eventDates = Object.keys(updatedEvents);
+    const calculateCumulativeTotals = (transactions: Transaction[]): TotalsMap => {
+        const eventsMap: EventsMap = {};
         const recurringDates: string[] = [];
 
-        Object.entries(updatedEvents).forEach(([dateKey, transactions]) => {
-            transactions.forEach((transaction) => {
-                if (transaction.isRecurring) {
-                    const transactionDate = new Date(dateKey);
-                    const { value, type } = transaction.interval;
-                    let currentDate = new Date(transactionDate);
+        transactions.forEach((tx) => {
+            const key = new Date(tx.date).toISOString().split('T')[0];
+            if (!eventsMap[key]) eventsMap[key] = [];
+            eventsMap[key].push(tx);
 
-                    while (currentDate <= new Date()) {
-                        recurringDates.push(currentDate.toISOString().split('T')[0]);
-                        if (type === 'daily') currentDate.setDate(currentDate.getDate() + value);
-                        else if (type === 'weekly') currentDate.setDate(currentDate.getDate() + value * 7);
-                        else if (type === 'monthly') currentDate = addMonthsSafely(currentDate, value);
-                    }
+            if (tx.isRecurring) {
+                let currentDate = new Date(tx.date);
+                const { value, type } = tx.interval;
+
+                while (currentDate <= new Date()) {
+                    const recurringKey = currentDate.toISOString().split('T')[0];
+                    recurringDates.push(recurringKey);
+
+                    if (type === 'daily') currentDate.setDate(currentDate.getDate() + value);
+                    else if (type === 'weekly') currentDate.setDate(currentDate.getDate() + value * 7);
+                    else if (type === 'monthly') currentDate = addMonthsSafely(currentDate, value);
                 }
-            });
+            }
         });
 
-        const allDates = [...eventDates, ...recurringDates];
-        const earliest = new Date(Math.min(...allDates.map((d) => new Date(d).getTime())));
+        const allKeys = [...Object.keys(eventsMap), ...recurringDates];
+        const uniqueDates = [...new Set(allKeys)];
+        const earliest = new Date(Math.min(...uniqueDates.map(d => new Date(d).getTime())));
         const latest = new Date();
         latest.setFullYear(latest.getFullYear() + 1);
 
@@ -150,8 +68,8 @@ const CustomCalendar: React.FC = () => {
         const totals: TotalsMap = {};
 
         fullRange.forEach((date) => {
-            const originals = updatedEvents[date] || [];
-            const recurring = getRecurringTransactions(date, updatedEvents);
+            const originals = eventsMap[date] || [];
+            const recurring = getRecurringTransactions(date, allTransactions);
             const dayTransactions = [...originals, ...recurring];
             const dayTotal = calculateDayTotal(dayTransactions);
             runningTotal += dayTotal;
@@ -161,6 +79,88 @@ const CustomCalendar: React.FC = () => {
         return totals;
     };
 
+    const cumulativeTotals = useMemo(() => {
+        return calculateCumulativeTotals(allTransactions);
+    }, [allTransactions]);
+
+    const eventsMap = useMemo(() => {
+        const map: Record<string, Transaction[]> = {};
+
+        for (const tx of allTransactions) {
+            const key = new Date(tx.date).toISOString().split('T')[0];
+            if (!map[key]) map[key] = [];
+            map[key].push(tx);
+        }
+
+        return map;
+    }, [allTransactions]);
+
+    useEffect(() => {
+        getAllTransactions()
+            .then((data) => {
+                setAllTransactions(data);
+                setLoading(false);
+            })
+            .catch(console.error);
+    }, []);
+
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        if (!selectedDate) return;
+
+        const description = (form.description as HTMLInputElement).value;
+        const type = (form.type as HTMLSelectElement).value as TransactionType;
+        const amount = parseFloat((form.amount as HTMLInputElement).value) || 0;
+        const isRecurring = (form.isRecurring as HTMLInputElement).checked;
+        const intervalValue = parseInt((form.intervalValue as HTMLInputElement).value, 10) || 1;
+        const intervalType = (form.intervalType as HTMLSelectElement).value as IntervalType;
+
+        const transactionInput: NewTransactionInput = {
+            date: selectedDate!.toISOString(),
+            description,
+            type,
+            amount,
+            isRecurring,
+            interval: { value: intervalValue, type: intervalType },
+        };
+
+        try {
+            if (editingTransaction) {
+                const updated = await updateTransaction(editingTransaction.id, transactionInput);
+                setAllTransactions(prev => prev.map(tx => tx.id === updated.id ? updated : tx));
+            } else {
+                const created = await createTransaction(transactionInput);
+                setAllTransactions(prev => [...prev, created]);
+            }
+
+            setEditingTransaction(null);
+            form.reset();
+            setIsModalOpen(false);
+        } catch (err) {
+            console.error('Failed to save transaction:', err);
+        }
+    };
+
+    const handleEditTransaction = (dateKey: string, transaction: Transaction) => {
+        setEditingTransaction({ ...transaction, dateKey });
+        setSelectedDate(new Date(dateKey));
+    };
+
+    const handleRemoveTransaction = async (transactionId: number) => {
+        try {
+            await deleteTransaction(transactionId);
+            setAllTransactions(prev => prev.filter(tx => tx.id !== transactionId));
+        } catch (err) {
+            console.error('Failed to delete transaction:', err);
+        }
+    };
+
+    const calculateDayTotal = (transactions: Transaction[]) => {
+        return transactions.reduce((total, t) => total + (t.type === 'income' ? t.amount : -t.amount), 0);
+    };
+
+
     const addMonthsSafely = (date: Date, months: number): Date => {
         const newDate = new Date(date);
         newDate.setMonth(newDate.getMonth() + months);
@@ -168,31 +168,44 @@ const CustomCalendar: React.FC = () => {
         return newDate;
     };
 
-    const getRecurringTransactions = (dateKey: string, updatedEvents: EventsMap = events): Transaction[] => {
+    const getRecurringTransactions = (dateKey: string, allTransactions: Transaction[]): Transaction[] => {
         const result: Transaction[] = [];
         const currentDate = new Date(dateKey);
 
-        Object.entries(updatedEvents).forEach(([originalDate, transactions]) => {
-            transactions.forEach((t) => {
-                if (!t.isRecurring) return;
-                const start = new Date(originalDate);
-                const { value, type } = t.interval;
+        allTransactions.forEach((tx) => {
+            if (!tx.isRecurring) return;
 
-                const diffInDays = Math.floor((currentDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+            const transactionDate = new Date(tx.date);
+            const { value, type } = tx.interval;
 
-                if (type === 'daily' && diffInDays > 0 && diffInDays % value === 0) {
-                    result.push({ ...t, isRecurringInstance: true });
-                } else if (type === 'weekly' && diffInDays > 0 && diffInDays % (value * 7) === 0) {
-                    result.push({ ...t, isRecurringInstance: true });
-                } else if (type === 'monthly') {
-                    const diffInMonths =
-                        currentDate.getMonth() - start.getMonth() + 12 * (currentDate.getFullYear() - start.getFullYear());
-                    const expectedDate = addMonthsSafely(start, diffInMonths);
-                    if (diffInMonths > 0 && diffInMonths % value === 0 && currentDate.getTime() === expectedDate.getTime()) {
-                        result.push({ ...t, isRecurringInstance: true });
-                    }
+            const diffInDays = Math.floor(
+                (currentDate.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            if (type === 'daily') {
+                if (diffInDays > 0 && diffInDays % value === 0) {
+                    result.push({ ...tx, isRecurringInstance: true });
                 }
-            });
+            } else if (type === 'weekly') {
+                if (diffInDays > 0 && diffInDays % (value * 7) === 0) {
+                    result.push({ ...tx, isRecurringInstance: true });
+                }
+            } else if (type === 'monthly') {
+                const diffInMonths =
+                    currentDate.getMonth() -
+                    transactionDate.getMonth() +
+                    12 * (currentDate.getFullYear() - transactionDate.getFullYear());
+
+                const expectedDate = addMonthsSafely(transactionDate, diffInMonths);
+
+                if (
+                    diffInMonths > 0 &&
+                    diffInMonths % value === 0 &&
+                    currentDate.getTime() === expectedDate.getTime()
+                ) {
+                    result.push({ ...tx, isRecurringInstance: true });
+                }
+            }
         });
 
         return result;
@@ -200,8 +213,8 @@ const CustomCalendar: React.FC = () => {
 
     const renderDayContent = (day: Date) => {
         const dateKey = day.toISOString().split('T')[0];
-        const originals = events[dateKey] || [];
-        const recurring = getRecurringTransactions(dateKey);
+        const originals = eventsMap[dateKey] || [];
+        const recurring = getRecurringTransactions(dateKey, allTransactions);
         const all = [...originals, ...recurring];
         const total = cumulativeTotals[dateKey] || 0;
 
@@ -226,11 +239,12 @@ const CustomCalendar: React.FC = () => {
 
     return (
         <div className="min-h-screen px-4 py-6">
-            <h2 className="text-3xl font-bold mb-6">Means</h2>
+            <h2 className="text-3xl font-bold mb-6">Means Budget Planner</h2>
             <div className="flex flex-col lg:flex-row gap-8">
                 <div className="w-full max-w-none">
                     <DatePicker
-                        selected={selectedDate}
+                        selected={null}
+                        openToDate={new Date()}
                         onChange={handleDateChange}
                         inline
                         renderDayContents={(day, date) => renderDayContent(date)}
@@ -245,7 +259,7 @@ const CustomCalendar: React.FC = () => {
 
                     {/* Transactions list */}
                     <div className="mb-4 space-y-2 max-h-60 overflow-y-auto">
-                        {(events[selectedDate?.toISOString().split('T')[0] || ''] || []).map((t) => (
+                        {(eventsMap[selectedDate?.toISOString().split('T')[0] || ''] || []).map((t) => (
                             <div
                                 key={t.id}
                                 className="flex justify-between items-center p-2 border border-gray-200 rounded"
@@ -272,7 +286,7 @@ const CustomCalendar: React.FC = () => {
                                         <button
                                             className="text-sm text-red-500 hover:underline"
                                             onClick={() =>
-                                                handleRemoveTransaction(selectedDate!.toISOString().split('T')[0], t.id)
+                                                handleRemoveTransaction(t.id)
                                             }
                                         >
                                             Remove

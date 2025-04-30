@@ -10,6 +10,7 @@ export interface Interval {
 
 export interface Transaction {
     id: number;
+    date: string;
     description: string;
     type: TransactionType;
     amount: number;
@@ -18,6 +19,9 @@ export interface Transaction {
     timestamp: string;
     isRecurringInstance?: boolean;
 }
+
+export type NewTransactionInput = Omit<Transaction, 'id' | 'timestamp' | 'isRecurringInstance'>;
+
 
 export interface EditingTransaction extends Transaction {
     dateKey: string;
