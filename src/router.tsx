@@ -2,8 +2,7 @@ import { createBrowserRouter } from 'react-router';
 import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './components/LandingPage';
 import CustomCalendar from './components/CustomCalendar'
-import { Navigate } from 'react-router';
-
+import Callback from './components/Callback';
 
 export const router = createBrowserRouter([
     {
@@ -11,11 +10,11 @@ export const router = createBrowserRouter([
         element: <LandingPage />,
     },
     {
-        path: 'calendar',
+        path: '/calendar',
         element: <ProtectedRoute><CustomCalendar /></ProtectedRoute>,
     },
     {
-        path: 'callback',
-        element: <Navigate to="/calendar" replace />,
-    },
+        path: '/callback',
+        element: <Callback />
+    }
 ]);
