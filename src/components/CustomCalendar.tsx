@@ -11,9 +11,9 @@ const CustomCalendar: React.FC = () => {
     const [editingTransaction, setEditingTransaction] = useState<EditingTransaction | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-    const [loading, setLoading] = useState(true);
 
     const handleDateChange = (date: Date | null) => {
+        F =
         setSelectedDate(date);
         setIsModalOpen(true);
     };
@@ -247,7 +247,7 @@ const CustomCalendar: React.FC = () => {
                         openToDate={new Date()}
                         onChange={handleDateChange}
                         inline
-                        renderDayContents={(day, date) => renderDayContent(date)}
+                        renderDayContents={(_, date) => date ? renderDayContent(date) : null}
                         calendarClassName="!w-full !max-w-full custom-datepicker"
                     />
                 </div>
