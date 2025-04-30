@@ -13,7 +13,6 @@ const CustomCalendar: React.FC = () => {
     const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
 
     const handleDateChange = (date: Date | null) => {
-        F =
         setSelectedDate(date);
         setIsModalOpen(true);
     };
@@ -99,7 +98,6 @@ const CustomCalendar: React.FC = () => {
         getAllTransactions()
             .then((data) => {
                 setAllTransactions(data);
-                setLoading(false);
             })
             .catch(console.error);
     }, []);
