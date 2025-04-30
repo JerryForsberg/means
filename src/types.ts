@@ -16,11 +16,12 @@ export interface Transaction {
     amount: number;
     isRecurring: boolean;
     interval: Interval;
-    timestamp: string;
+    createdAt: string;
+    updatedAt?: string;
     isRecurringInstance?: boolean;
 }
 
-export type NewTransactionInput = Omit<Transaction, 'id' | 'timestamp' | 'isRecurringInstance'>;
+export type NewTransactionInput = Omit<Transaction, 'id' | 'isRecurringInstance' | 'createdAt' | 'updatedAt'>;
 
 
 export interface EditingTransaction extends Transaction {

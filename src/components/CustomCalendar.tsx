@@ -78,6 +78,7 @@ const CustomCalendar: React.FC = () => {
         return totals;
     };
 
+
     const cumulativeTotals = useMemo(() => {
         return calculateCumulativeTotals(allTransactions);
     }, [allTransactions]);
@@ -93,6 +94,15 @@ const CustomCalendar: React.FC = () => {
 
         return map;
     }, [allTransactions]);
+
+    const selectedKey = selectedDate?.toISOString().split('T')[0] || '';
+
+    const transactionsForSelectedDate = useMemo(() => {
+        const originals = eventsMap[selectedKey] || [];
+        const recurring = getRecurringTransactions(selectedKey, allTransactions);
+        return [...originals, ...recurring];
+    }, [selectedKey, eventsMap, allTransactions]);
+
 
     useEffect(() => {
         getAllTransactions()
@@ -257,7 +267,7 @@ const CustomCalendar: React.FC = () => {
 
                     {/* Transactions list */}
                     <div className="mb-4 space-y-2 max-h-60 overflow-y-auto">
-                        {(eventsMap[selectedDate?.toISOString().split('T')[0] || ''] || []).map((t) => (
+                        {transactionsForSelectedDate.map((t) => (
                             <div
                                 key={t.id}
                                 className="flex justify-between items-center p-2 border border-gray-200 rounded"
