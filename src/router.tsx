@@ -2,15 +2,21 @@ import { createBrowserRouter } from 'react-router';
 import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './components/LandingPage';
 import CustomCalendar from './components/CustomCalendar'
+import { Navigate } from 'react-router';
 
 
 export const router = createBrowserRouter([
     {
         path: '/',
+        index: true,
         element: <LandingPage />,
     },
     {
-        path: '/calendar',
+        path: 'calendar',
         element: <ProtectedRoute><CustomCalendar /></ProtectedRoute>,
+    },
+    {
+        path: 'callback',
+        element: <Navigate to="/calendar" replace />,
     },
 ]);
