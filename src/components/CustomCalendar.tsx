@@ -70,6 +70,10 @@ const CustomCalendar: React.FC = () => {
         return map;
     }, [allTransactions]);
 
+    const calculateDayTotal = (transactions: Transaction[]) => {
+        return transactions.reduce((total, t) => total + (t.type === 'income' ? t.amount : -t.amount), 0);
+    };
+
     const cumulativeTotals = useMemo(() => {
         const allKeys = new Set([
             ...Object.keys(eventsMap),
@@ -158,10 +162,6 @@ const CustomCalendar: React.FC = () => {
         } catch (err) {
             console.error('Failed to delete transaction:', err);
         }
-    };
-
-    const calculateDayTotal = (transactions: Transaction[]) => {
-        return transactions.reduce((total, t) => total + (t.type === 'income' ? t.amount : -t.amount), 0);
     };
 
     const addMonthsSafely = (date: Date, months: number): Date => {
