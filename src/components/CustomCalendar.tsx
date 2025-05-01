@@ -4,13 +4,14 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { Transaction, TransactionType, IntervalType, EventsMap, TotalsMap, EditingTransaction, NewTransactionInput } from '../types';
 import DateModal from './DateModal';
-import { createTransaction, deleteTransaction, getAllTransactions, updateTransaction } from '../utils/api'; // Assuming you have an API utility to fetch transactions
+import { useApi } from '../utils/api'; // Assuming you have an API utility to fetch transactions
 
 const CustomCalendar: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [editingTransaction, setEditingTransaction] = useState<EditingTransaction | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+    const { createTransaction, deleteTransaction, getAllTransactions, updateTransaction } = useApi();
 
     const handleDateChange = (date: Date | null) => {
         setSelectedDate(date);
