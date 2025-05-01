@@ -4,7 +4,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { Transaction, TransactionType, IntervalType, EventsMap, TotalsMap, EditingTransaction, NewTransactionInput } from '../types';
 import DateModal from './DateModal';
-import { useApi } from '../utils/api'; // Assuming you have an API utility to fetch transactions
+import { useApi } from '../utils/api';
 
 const CustomCalendar: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -23,18 +23,18 @@ const CustomCalendar: React.FC = () => {
         setSelectedDate(null);
     };
 
-    const generateDateRange = (startDate: Date, endDate: Date): string[] => {
-        const dates: string[] = [];
-        const currentDate = new Date(startDate);
-        while (currentDate <= endDate) {
-            dates.push(currentDate.toISOString().split('T')[0]);
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-        return dates;
-    };
+    // const generateDateRange = (startDate: Date, endDate: Date): string[] => {
+    //     const dates: string[] = [];
+    //     const currentDate = new Date(startDate);
+    //     while (currentDate <= endDate) {
+    //         dates.push(currentDate.toISOString().split('T')[0]);
+    //         currentDate.setDate(currentDate.getDate() + 1);
+    //     }
+    //     return dates;
+    // };
 
     const eventsMap = useMemo(() => {
-        const map: Record<string, Transaction[]> = {};
+        const map: EventsMap = {};
         try {
             for (const tx of allTransactions) {
                 const key = new Date(tx.date).toISOString().split('T')[0];
@@ -47,85 +47,42 @@ const CustomCalendar: React.FC = () => {
         return map;
     }, [allTransactions]);
 
-    const getRecurringTransactions = (dateKey: string, allTransactions: Transaction[]): Transaction[] => {
-        const result: Transaction[] = [];
-        const currentDate = new Date(dateKey);
+    const recurringTransactionMap = useMemo(() => {
+        const map: EventsMap = {};
+        const today = new Date();
 
         allTransactions.forEach((tx) => {
             if (!tx.isRecurring) return;
-
-            const transactionDate = new Date(tx.date);
+            let current = new Date(tx.date);
             const { value, type } = tx.interval;
 
-            const diffInDays = Math.floor(
-                (currentDate.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24)
-            );
+            while (current <= today) {
+                const key = current.toISOString().split('T')[0];
+                if (!map[key]) map[key] = [];
+                map[key].push({ ...tx, isRecurringInstance: true });
 
-            if (type === 'daily') {
-                if (diffInDays > 0 && diffInDays % value === 0) {
-                    result.push({ ...tx, isRecurringInstance: true });
-                }
-            } else if (type === 'weekly') {
-                if (diffInDays > 0 && diffInDays % (value * 7) === 0) {
-                    result.push({ ...tx, isRecurringInstance: true });
-                }
-            } else if (type === 'monthly') {
-                const diffInMonths =
-                    currentDate.getMonth() -
-                    transactionDate.getMonth() +
-                    12 * (currentDate.getFullYear() - transactionDate.getFullYear());
-
-                const expectedDate = addMonthsSafely(transactionDate, diffInMonths);
-
-                if (
-                    diffInMonths > 0 &&
-                    diffInMonths % value === 0 &&
-                    currentDate.getTime() === expectedDate.getTime()
-                ) {
-                    result.push({ ...tx, isRecurringInstance: true });
-                }
+                if (type === 'daily') current.setDate(current.getDate() + value);
+                else if (type === 'weekly') current.setDate(current.getDate() + value * 7);
+                else if (type === 'monthly') current = addMonthsSafely(current, value);
             }
         });
 
-        return result;
-    };
+        return map;
+    }, [allTransactions]);
 
-    const calculateCumulativeTotals = (
-        eventsMap: EventsMap,
-        allTransactions: Transaction[]
-    ): TotalsMap => {
-        const recurringDates: string[] = [];
+    const cumulativeTotals = useMemo(() => {
+        const allKeys = new Set([
+            ...Object.keys(eventsMap),
+            ...Object.keys(recurringTransactionMap),
+        ]);
 
-        // Identify recurring date keys (don't mutate eventsMap here)
-        allTransactions.forEach((tx) => {
-            if (tx.isRecurring) {
-                let currentDate = new Date(tx.date);
-                const { value, type } = tx.interval;
-
-                while (currentDate <= new Date()) {
-                    const recurringKey = currentDate.toISOString().split('T')[0];
-                    recurringDates.push(recurringKey);
-
-                    if (type === 'daily') currentDate.setDate(currentDate.getDate() + value);
-                    else if (type === 'weekly') currentDate.setDate(currentDate.getDate() + value * 7);
-                    else if (type === 'monthly') currentDate = addMonthsSafely(currentDate, value);
-                }
-            }
-        });
-
-        const allKeys = [...Object.keys(eventsMap), ...recurringDates];
-        const uniqueDates = [...new Set(allKeys)];
-        const earliest = new Date(Math.min(...uniqueDates.map(d => new Date(d).getTime())));
-        const latest = new Date();
-        latest.setFullYear(latest.getFullYear() + 1);
-
-        const fullRange = generateDateRange(earliest, latest);
+        const sortedKeys = Array.from(allKeys).sort();
         let runningTotal = 0;
         const totals: TotalsMap = {};
 
-        fullRange.forEach((date) => {
+        sortedKeys.forEach((date) => {
             const originals = eventsMap[date] || [];
-            const recurring = getRecurringTransactions(date, allTransactions);
+            const recurring = recurringTransactionMap[date] || [];
             const dayTransactions = [...originals, ...recurring];
             const dayTotal = calculateDayTotal(dayTransactions);
             runningTotal += dayTotal;
@@ -133,20 +90,15 @@ const CustomCalendar: React.FC = () => {
         });
 
         return totals;
-    };
-
-    const cumulativeTotals = useMemo(() => {
-        return calculateCumulativeTotals(eventsMap, allTransactions);
-    }, [eventsMap, allTransactions]);
+    }, [eventsMap, recurringTransactionMap]);
 
     const selectedKey = selectedDate?.toISOString().split('T')[0] || '';
 
     const transactionsForSelectedDate = useMemo(() => {
         const originals = eventsMap[selectedKey] || [];
-        const recurring = getRecurringTransactions(selectedKey, allTransactions);
+        const recurring = recurringTransactionMap[selectedKey] || [];
         return [...originals, ...recurring];
-    }, [selectedKey, eventsMap, allTransactions]);
-
+    }, [selectedKey, eventsMap, recurringTransactionMap]);
 
     useEffect(() => {
         getAllTransactions()
@@ -212,7 +164,6 @@ const CustomCalendar: React.FC = () => {
         return transactions.reduce((total, t) => total + (t.type === 'income' ? t.amount : -t.amount), 0);
     };
 
-
     const addMonthsSafely = (date: Date, months: number): Date => {
         const newDate = new Date(date);
         newDate.setMonth(newDate.getMonth() + months);
@@ -223,27 +174,21 @@ const CustomCalendar: React.FC = () => {
     const renderDayContent = (day: Date) => {
         const dateKey = day.toISOString().split('T')[0];
         const originals = eventsMap[dateKey] || [];
-        const recurring = getRecurringTransactions(dateKey, allTransactions);
+        const recurring = recurringTransactionMap[dateKey] || [];
         const all = [...originals, ...recurring];
         const total = cumulativeTotals[dateKey] || 0;
 
         return (
             <div className="h-full p-2 rounded-md bg-white border border-gray-200 flex flex-col justify-between text-sm">
                 <div className="text-gray-800 font-semibold">{day.getDate()}</div>
-
                 <div className="text-xs text-gray-500 mt-1">
                     {all.length} {all.length === 1 ? 'transaction' : 'transactions'}
                 </div>
-
-                <div
-                    className={`font-bold mt-1 ${total >= 0 ? 'text-green-600' : 'text-red-500'
-                        }`}
-                >
+                <div className={`font-bold mt-1 ${total >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                     ${Math.abs(total).toFixed(2)}
                 </div>
             </div>
         );
-
     };
 
     return (
@@ -266,19 +211,12 @@ const CustomCalendar: React.FC = () => {
                         {selectedDate?.toLocaleDateString()}
                     </h3>
 
-                    {/* Transactions list */}
                     <div className="mb-4 space-y-2 max-h-60 overflow-y-auto">
                         {transactionsForSelectedDate.map((t) => (
-                            <div
-                                key={t.id}
-                                className="flex justify-between items-center p-2 border border-gray-200 rounded"
-                            >
+                            <div key={t.id} className="flex justify-between items-center p-2 border border-gray-200 rounded">
                                 <div>
                                     <p className="font-medium">{t.description}</p>
-                                    <p
-                                        className={`text-sm ${t.type === 'income' ? 'text-green-600' : 'text-red-500'
-                                            }`}
-                                    >
+                                    <p className={`text-sm ${t.type === 'income' ? 'text-green-600' : 'text-red-500'}`}>
                                         {t.type === 'income' ? '+' : '-'}${t.amount.toFixed(2)}
                                     </p>
                                 </div>
@@ -286,17 +224,13 @@ const CustomCalendar: React.FC = () => {
                                     <div className="flex gap-2">
                                         <button
                                             className="text-sm text-yellow-600 hover:underline"
-                                            onClick={() =>
-                                                handleEditTransaction(selectedDate!.toISOString().split('T')[0], t)
-                                            }
+                                            onClick={() => handleEditTransaction(selectedDate!.toISOString().split('T')[0], t)}
                                         >
                                             Edit
                                         </button>
                                         <button
                                             className="text-sm text-red-500 hover:underline"
-                                            onClick={() =>
-                                                handleRemoveTransaction(t.id)
-                                            }
+                                            onClick={() => handleRemoveTransaction(t.id)}
                                         >
                                             Remove
                                         </button>
@@ -306,7 +240,6 @@ const CustomCalendar: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Form to add/edit */}
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <input
                             type="text"
@@ -360,15 +293,11 @@ const CustomCalendar: React.FC = () => {
                                 <option value="monthly">Months</option>
                             </select>
                         </div>
-                        <button
-                            type="submit"
-                            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                        >
+                        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                             {editingTransaction ? 'Update' : 'Add'} Transaction
                         </button>
                     </form>
                 </DateModal>
-
             </div>
         </div>
     );
