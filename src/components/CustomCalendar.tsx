@@ -33,15 +33,25 @@ const CustomCalendar: React.FC = () => {
         return dates;
     };
 
-    const calculateCumulativeTotals = (transactions: Transaction[]): TotalsMap => {
-        const eventsMap: EventsMap = {};
+    const eventsMap = useMemo(() => {
+        const map: Record<string, Transaction[]> = {};
+        for (const tx of allTransactions) {
+            const key = new Date(tx.date).toISOString().split('T')[0];
+            if (!map[key]) map[key] = [];
+            map[key].push(tx);
+        }
+        return map;
+    }, [allTransactions]);
+
+
+    const calculateCumulativeTotals = (
+        eventsMap: EventsMap,
+        allTransactions: Transaction[]
+    ): TotalsMap => {
         const recurringDates: string[] = [];
 
-        transactions.forEach((tx) => {
-            const key = new Date(tx.date).toISOString().split('T')[0];
-            if (!eventsMap[key]) eventsMap[key] = [];
-            eventsMap[key].push(tx);
-
+        // Identify recurring date keys (don't mutate eventsMap here)
+        allTransactions.forEach((tx) => {
             if (tx.isRecurring) {
                 let currentDate = new Date(tx.date);
                 const { value, type } = tx.interval;
@@ -122,22 +132,9 @@ const CustomCalendar: React.FC = () => {
         return result;
     };
 
-
     const cumulativeTotals = useMemo(() => {
-        return calculateCumulativeTotals(allTransactions);
-    }, [allTransactions]);
-
-    const eventsMap = useMemo(() => {
-        const map: Record<string, Transaction[]> = {};
-
-        for (const tx of allTransactions) {
-            const key = new Date(tx.date).toISOString().split('T')[0];
-            if (!map[key]) map[key] = [];
-            map[key].push(tx);
-        }
-
-        return map;
-    }, [allTransactions]);
+        return calculateCumulativeTotals(eventsMap, allTransactions);
+    }, [eventsMap, allTransactions]);
 
     const selectedKey = selectedDate?.toISOString().split('T')[0] || '';
 
