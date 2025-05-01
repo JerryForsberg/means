@@ -35,10 +35,14 @@ const CustomCalendar: React.FC = () => {
 
     const eventsMap = useMemo(() => {
         const map: Record<string, Transaction[]> = {};
-        for (const tx of allTransactions) {
-            const key = new Date(tx.date).toISOString().split('T')[0];
-            if (!map[key]) map[key] = [];
-            map[key].push(tx);
+        try {
+            for (const tx of allTransactions) {
+                const key = new Date(tx.date).toISOString().split('T')[0];
+                if (!map[key]) map[key] = [];
+                map[key].push(tx);
+            }
+        } catch (err) {
+            console.error('Failed to build eventsMap:', err, allTransactions);
         }
         return map;
     }, [allTransactions]);
