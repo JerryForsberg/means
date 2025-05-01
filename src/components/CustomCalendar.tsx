@@ -79,6 +79,49 @@ const CustomCalendar: React.FC = () => {
         return totals;
     };
 
+    const getRecurringTransactions = (dateKey: string, allTransactions: Transaction[]): Transaction[] => {
+        const result: Transaction[] = [];
+        const currentDate = new Date(dateKey);
+
+        allTransactions.forEach((tx) => {
+            if (!tx.isRecurring) return;
+
+            const transactionDate = new Date(tx.date);
+            const { value, type } = tx.interval;
+
+            const diffInDays = Math.floor(
+                (currentDate.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            if (type === 'daily') {
+                if (diffInDays > 0 && diffInDays % value === 0) {
+                    result.push({ ...tx, isRecurringInstance: true });
+                }
+            } else if (type === 'weekly') {
+                if (diffInDays > 0 && diffInDays % (value * 7) === 0) {
+                    result.push({ ...tx, isRecurringInstance: true });
+                }
+            } else if (type === 'monthly') {
+                const diffInMonths =
+                    currentDate.getMonth() -
+                    transactionDate.getMonth() +
+                    12 * (currentDate.getFullYear() - transactionDate.getFullYear());
+
+                const expectedDate = addMonthsSafely(transactionDate, diffInMonths);
+
+                if (
+                    diffInMonths > 0 &&
+                    diffInMonths % value === 0 &&
+                    currentDate.getTime() === expectedDate.getTime()
+                ) {
+                    result.push({ ...tx, isRecurringInstance: true });
+                }
+            }
+        });
+
+        return result;
+    };
+
 
     const cumulativeTotals = useMemo(() => {
         return calculateCumulativeTotals(allTransactions);
@@ -175,49 +218,6 @@ const CustomCalendar: React.FC = () => {
         newDate.setMonth(newDate.getMonth() + months);
         if (newDate.getDate() !== date.getDate()) newDate.setDate(0);
         return newDate;
-    };
-
-    const getRecurringTransactions = (dateKey: string, allTransactions: Transaction[]): Transaction[] => {
-        const result: Transaction[] = [];
-        const currentDate = new Date(dateKey);
-
-        allTransactions.forEach((tx) => {
-            if (!tx.isRecurring) return;
-
-            const transactionDate = new Date(tx.date);
-            const { value, type } = tx.interval;
-
-            const diffInDays = Math.floor(
-                (currentDate.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24)
-            );
-
-            if (type === 'daily') {
-                if (diffInDays > 0 && diffInDays % value === 0) {
-                    result.push({ ...tx, isRecurringInstance: true });
-                }
-            } else if (type === 'weekly') {
-                if (diffInDays > 0 && diffInDays % (value * 7) === 0) {
-                    result.push({ ...tx, isRecurringInstance: true });
-                }
-            } else if (type === 'monthly') {
-                const diffInMonths =
-                    currentDate.getMonth() -
-                    transactionDate.getMonth() +
-                    12 * (currentDate.getFullYear() - transactionDate.getFullYear());
-
-                const expectedDate = addMonthsSafely(transactionDate, diffInMonths);
-
-                if (
-                    diffInMonths > 0 &&
-                    diffInMonths % value === 0 &&
-                    currentDate.getTime() === expectedDate.getTime()
-                ) {
-                    result.push({ ...tx, isRecurringInstance: true });
-                }
-            }
-        });
-
-        return result;
     };
 
     const renderDayContent = (day: Date) => {
