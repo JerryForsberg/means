@@ -212,7 +212,7 @@ const CustomCalendar: React.FC = () => {
 
     return (
         <div className="min-h-screen px-4 py-6">
-            <h2 className="text-3xl font-bold mb-6">Means Budget Planner</h2>
+            <h2 className="text-3xl font-bold mb-6 text-center font-sans">Means Budget Planner</h2>
             <div className="flex flex-col lg:flex-row gap-8">
                 <div className="w-full max-w-none">
                     {showDisclaimer && (
@@ -347,10 +347,12 @@ const CustomCalendar: React.FC = () => {
                     </form>
                 </DateModal>
             </div>
-            <footer>
-                <button onClick={() => setShowDisclaimer(true)} className="text-sm text-gray-600 underline">
-                    Disclaimer
-                </button>
+            <footer className="mt-8">
+                <div className="flex justify-center">
+                    <button onClick={() => setShowDisclaimer(true)} className="text-lg text-red-600-600 underline">
+                        Disclaimer
+                    </button>
+                </div>
             </footer>
         </div>
     );
