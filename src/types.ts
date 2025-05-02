@@ -3,10 +3,6 @@
 export type TransactionType = 'income' | 'expense';
 export type IntervalType = 'daily' | 'weekly' | 'monthly';
 
-export interface Interval {
-    value: number;
-    type: IntervalType;
-}
 
 export interface Transaction {
     id: number;
@@ -15,7 +11,8 @@ export interface Transaction {
     type: TransactionType;
     amount: number;
     isRecurring: boolean;
-    interval: Interval;
+    intervalValue: number;
+    intervalType: IntervalType;
     createdAt: string;
     updatedAt?: string;
     isRecurringInstance?: boolean;
