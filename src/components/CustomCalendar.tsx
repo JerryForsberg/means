@@ -33,6 +33,21 @@ const CustomCalendar: React.FC = () => {
         return dates;
     };
 
+    const getCalendarDateRange = (referenceDate: Date = new Date()) => {
+        const start = new Date(referenceDate);
+        start.setDate(1); // start of the month
+        const dayOfWeek = start.getDay(); // 0 = Sunday, 6 = Saturday
+        start.setDate(start.getDate() - dayOfWeek); // go back to beginning of week
+
+        const end = new Date(referenceDate);
+        end.setMonth(end.getMonth() + 1);
+        end.setDate(0); // last day of next month
+        const lastDayOfWeek = end.getDay();
+        end.setDate(end.getDate() + (6 - lastDayOfWeek)); // go forward to end of week
+
+        return { start, end };
+    };
+
     const eventsMap = useMemo(() => {
         const map: EventsMap = {};
         try {
@@ -70,33 +85,31 @@ const CustomCalendar: React.FC = () => {
         return map;
     }, [allTransactions]);
 
-    const calculateDayTotal = (transactions: Transaction[]) => {
-        return transactions.reduce((total, t) => total + (t.type === 'income' ? t.amount : -t.amount), 0);
-    };
+    // const calculateDayTotal = (transactions: Transaction[]) => {
+    //     return transactions.reduce((total, t) => total + (t.type === 'income' ? t.amount : -t.amount), 0);
+    // };
 
     const cumulativeTotals = useMemo(() => {
-        const map: TotalsMap = {};
-        const startDate = allTransactions.length
-            ? new Date(allTransactions[0].date)
-            : new Date();
-        const endDate = new Date(); // or extend it to end of visible calendar
-
-        const fullDateKeys = generateDateRange(startDate, endDate);
+        const totals: TotalsMap = {};
+        const { start, end } = getCalendarDateRange();
+        const dateKeys = generateDateRange(start, end);
 
         let runningTotal = 0;
 
-        fullDateKeys.forEach((dateKey) => {
+        dateKeys.forEach((dateKey) => {
             const originals = eventsMap[dateKey] || [];
             const recurring = recurringTransactionMap[dateKey] || [];
-            const dayTransactions = [...originals, ...recurring];
+            const transactions = [...originals, ...recurring];
 
-            const dayTotal = calculateDayTotal(dayTransactions);
+            const dayTotal = transactions.reduce((sum, t) => {
+                return sum + (t.type === 'income' ? t.amount : -t.amount);
+            }, 0);
+
             runningTotal += dayTotal;
-
-            map[dateKey] = runningTotal;
+            totals[dateKey] = runningTotal;
         });
 
-        return map;
+        return totals;
     }, [eventsMap, recurringTransactionMap, allTransactions]);
 
     const selectedKey = selectedDate?.toISOString().split('T')[0] || '';
