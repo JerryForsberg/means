@@ -34,18 +34,6 @@ const CustomCalendar: React.FC = () => {
         return dates;
     };
 
-    const getCalendarDateRange = (referenceDate: Date = new Date()) => {
-        const start = new Date(referenceDate);
-        start.setDate(1); // start of the month
-        const dayOfWeek = start.getDay(); // 0 = Sunday, 6 = Saturday
-        start.setDate(start.getDate() - dayOfWeek); // go back to beginning of week
-
-        const end = new Date();
-        end.setFullYear(end.getFullYear() + 1);
-
-        return { start, end };
-    };
-
     const eventsMap = useMemo(() => {
         const map: EventsMap = {};
         try {
@@ -60,6 +48,14 @@ const CustomCalendar: React.FC = () => {
         return map;
     }, [allTransactions]);
 
+    function incrementDate(date: Date, type: string, value: number): Date {
+        const d = new Date(date);
+        if (type === 'daily') d.setDate(d.getDate() + value);
+        else if (type === 'weekly') d.setDate(d.getDate() + value * 7);
+        else if (type === 'monthly') d.setMonth(d.getMonth() + value);
+        return d;
+    }
+
     const recurringTransactionMap = useMemo(() => {
         const map: EventsMap = {};
 
@@ -67,6 +63,7 @@ const CustomCalendar: React.FC = () => {
             if (!tx.isRecurring) return;
             let current = new Date(tx.date);
             const { intervalType, intervalValue } = tx;
+            const originalDateKey = new Date(tx.date).toISOString().split('T')[0];
 
             const endDate = tx.recurrenceEndDate
                 ? new Date(tx.recurrenceEndDate)
@@ -74,12 +71,15 @@ const CustomCalendar: React.FC = () => {
 
             while (current <= endDate) {
                 const key = current.toISOString().split('T')[0];
+
+                if (key === originalDateKey) {
+                    current = incrementDate(current, intervalType, intervalValue);
+                    continue; // ✅ skip original date to avoid duplication
+                }
+
                 if (!map[key]) map[key] = [];
                 map[key].push({ ...tx, isRecurringInstance: true });
-
-                if (intervalType === 'daily') current.setDate(current.getDate() + intervalValue);
-                else if (intervalType === 'weekly') current.setDate(current.getDate() + intervalValue * 7);
-                else if (intervalType === 'monthly') current = addMonthsSafely(current, intervalValue);
+                current = incrementDate(current, intervalType, intervalValue);
             }
         });
 
@@ -92,12 +92,17 @@ const CustomCalendar: React.FC = () => {
 
     const cumulativeTotals = useMemo(() => {
         const totals: TotalsMap = {};
-        const { start, end } = getCalendarDateRange();
-        const dateKeys = generateDateRange(start, end);
+        const allDates = allTransactions.map(tx => new Date(tx.date));
+        const earliestDate = allDates.length > 0
+            ? new Date(Math.min(...allDates.map(d => d.getTime())))
+            : new Date();
+        const end = new Date()
+        end.setFullYear(new Date().getFullYear() + 1);
+        const fullDateRange = generateDateRange(earliestDate, end);
 
         let runningTotal = 0;
 
-        dateKeys.forEach((dateKey) => {
+        fullDateRange.forEach((dateKey) => {
             const originals = eventsMap[dateKey] || [];
             const recurring = recurringTransactionMap[dateKey] || [];
             const transactions = [...originals, ...recurring];
@@ -182,13 +187,6 @@ const CustomCalendar: React.FC = () => {
         } catch (err) {
             console.error('Failed to delete transaction:', err);
         }
-    };
-
-    const addMonthsSafely = (date: Date, months: number): Date => {
-        const newDate = new Date(date);
-        newDate.setMonth(newDate.getMonth() + months);
-        if (newDate.getDate() !== date.getDate()) newDate.setDate(0);
-        return newDate;
     };
 
     const renderDayContent = (day: Date) => {
