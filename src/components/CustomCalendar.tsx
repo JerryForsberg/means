@@ -290,19 +290,22 @@ const CustomCalendar: React.FC = () => {
                             defaultValue={editingTransaction?.amount || ''}
                             className="w-full border px-3 py-2 rounded"
                         />
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="checkbox"
-                                name="isRecurring"
-                                defaultChecked={editingTransaction?.isRecurring || false}
-                            />
-                            <label>Recurring</label>
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    name="isRecurring"
+                                    defaultChecked={editingTransaction?.isRecurring || false}
+                                />
+                                <label>Recurring</label>
+                            </div>
                             <DatePicker
                                 selected={recurrenceEndDate}
                                 onChange={(date) => setRecurrenceEndDate(date)}
                                 placeholderText="Recurrence ends (optional)"
+                                className="border px-3 py-2 rounded w-full"
+                                dateFormat="yyyy-MM-dd"
                             />
-
                         </div>
                         <div className="flex gap-3">
                             <input
