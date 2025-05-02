@@ -1,5 +1,8 @@
+import { Navigate } from 'react-router';
+
+
 function Callback() {
-    return null; // Auth0Provider will finish login here
+    return <Navigate to={'/calendar'} />
 }
 
 export default Callback;
