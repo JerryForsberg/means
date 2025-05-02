@@ -40,11 +40,8 @@ const CustomCalendar: React.FC = () => {
         const dayOfWeek = start.getDay(); // 0 = Sunday, 6 = Saturday
         start.setDate(start.getDate() - dayOfWeek); // go back to beginning of week
 
-        const end = new Date(referenceDate);
-        end.setMonth(end.getMonth() + 1);
-        end.setDate(0); // last day of next month
-        const lastDayOfWeek = end.getDay();
-        end.setDate(end.getDate() + (6 - lastDayOfWeek)); // go forward to end of week
+        const end = new Date();
+        end.setFullYear(end.getFullYear() + 1);
 
         return { start, end };
     };
