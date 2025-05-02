@@ -54,16 +54,16 @@ const CustomCalendar: React.FC = () => {
         allTransactions.forEach((tx) => {
             if (!tx.isRecurring) return;
             let current = new Date(tx.date);
-            const { value, type } = tx.interval;
+            const { intervalType, intervalValue } = tx;
 
             while (current <= today) {
                 const key = current.toISOString().split('T')[0];
                 if (!map[key]) map[key] = [];
                 map[key].push({ ...tx, isRecurringInstance: true });
 
-                if (type === 'daily') current.setDate(current.getDate() + value);
-                else if (type === 'weekly') current.setDate(current.getDate() + value * 7);
-                else if (type === 'monthly') current = addMonthsSafely(current, value);
+                if (intervalType === 'daily') current.setDate(current.getDate() + intervalValue);
+                else if (intervalType === 'weekly') current.setDate(current.getDate() + intervalValue * 7);
+                else if (intervalType === 'monthly') current = addMonthsSafely(current, intervalValue);
             }
         });
 
@@ -130,7 +130,8 @@ const CustomCalendar: React.FC = () => {
             type,
             amount,
             isRecurring,
-            interval: { value: intervalValue, type: intervalType },
+            intervalValue,
+            intervalType
         };
 
         try {
@@ -280,12 +281,12 @@ const CustomCalendar: React.FC = () => {
                                 type="number"
                                 name="intervalValue"
                                 min="1"
-                                defaultValue={editingTransaction?.interval?.value || 1}
+                                defaultValue={editingTransaction?.intervalValue || 1}
                                 className="w-1/3 border px-2 py-1 rounded"
                             />
                             <select
                                 name="intervalType"
-                                defaultValue={editingTransaction?.interval?.type || 'daily'}
+                                defaultValue={editingTransaction?.intervalType || 'daily'}
                                 className="w-2/3 border px-3 py-2 rounded"
                             >
                                 <option value="daily">Days</option>
