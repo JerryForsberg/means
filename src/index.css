@@ -24,7 +24,7 @@ a:hover {
 }
 
 body {
-  @apply font-sans;
+  font-family: theme('fontFamily.sans');
 }
 
 h1 {
