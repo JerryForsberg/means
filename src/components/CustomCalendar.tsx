@@ -12,6 +12,7 @@ const CustomCalendar: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
     const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | null>(null);
+    const [showDisclaimer, setShowDisclaimer] = useState(false);
     const { createTransaction, deleteTransaction, getAllTransactions, updateTransaction } = useApi();
 
     const handleDateChange = (date: Date | null) => {
@@ -214,6 +215,26 @@ const CustomCalendar: React.FC = () => {
             <h2 className="text-3xl font-bold mb-6">Means Budget Planner</h2>
             <div className="flex flex-col lg:flex-row gap-8">
                 <div className="w-full max-w-none">
+                    {showDisclaimer && (
+                        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                            <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+                                <h2 className="text-lg font-bold mb-2">Disclaimer</h2>
+                                <p className="text-sm text-gray-700">
+                                    This budgeting application is intended as a demonstration project for portfolio purposes only.
+                                    It is not intended for real financial planning, and should not be used to store sensitive personal or financial data.
+                                    By using this application, you acknowledge that data is handled for demonstration purposes and at your own risk.
+                                </p>
+                                <div className="mt-4 flex justify-end">
+                                    <button
+                                        onClick={() => setShowDisclaimer(false)}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <DatePicker
                         selected={null}
                         openToDate={new Date()}
@@ -326,6 +347,11 @@ const CustomCalendar: React.FC = () => {
                     </form>
                 </DateModal>
             </div>
+            <footer>
+                <button onClick={() => setShowDisclaimer(true)} className="text-sm text-gray-600 underline">
+                    Disclaimer
+                </button>
+            </footer>
         </div>
     );
 };
