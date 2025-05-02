@@ -13,6 +13,7 @@ export interface Transaction {
     isRecurring: boolean;
     intervalValue: number;
     intervalType: IntervalType;
+    recurrenceEndDate?: string;
     createdAt: string;
     updatedAt?: string;
     isRecurringInstance?: boolean;
