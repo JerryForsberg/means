@@ -11,6 +11,7 @@ const CustomCalendar: React.FC = () => {
     const [editingTransaction, setEditingTransaction] = useState<EditingTransaction | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+    const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | null>(null);
     const { createTransaction, deleteTransaction, getAllTransactions, updateTransaction } = useApi();
 
     const handleDateChange = (date: Date | null) => {
@@ -64,14 +65,17 @@ const CustomCalendar: React.FC = () => {
 
     const recurringTransactionMap = useMemo(() => {
         const map: EventsMap = {};
-        const today = new Date();
 
         allTransactions.forEach((tx) => {
             if (!tx.isRecurring) return;
             let current = new Date(tx.date);
             const { intervalType, intervalValue } = tx;
 
-            while (current <= today) {
+            const endDate = tx.recurrenceEndDate
+                ? new Date(tx.recurrenceEndDate)
+                : new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+
+            while (current <= endDate) {
                 const key = current.toISOString().split('T')[0];
                 if (!map[key]) map[key] = [];
                 map[key].push({ ...tx, isRecurringInstance: true });
@@ -140,6 +144,7 @@ const CustomCalendar: React.FC = () => {
         const intervalValue = parseInt((form.intervalValue as HTMLInputElement).value, 10) || 1;
         const intervalType = (form.intervalType as HTMLSelectElement).value as IntervalType;
 
+
         const transactionInput: NewTransactionInput = {
             date: selectedDate!.toISOString(),
             description,
@@ -147,7 +152,8 @@ const CustomCalendar: React.FC = () => {
             amount,
             isRecurring,
             intervalValue,
-            intervalType
+            intervalType,
+            recurrenceEndDate: recurrenceEndDate ? recurrenceEndDate.toISOString() : undefined,
         };
 
         try {
@@ -291,6 +297,12 @@ const CustomCalendar: React.FC = () => {
                                 defaultChecked={editingTransaction?.isRecurring || false}
                             />
                             <label>Recurring</label>
+                            <DatePicker
+                                selected={recurrenceEndDate}
+                                onChange={(date) => setRecurrenceEndDate(date)}
+                                placeholderText="Recurrence ends (optional)"
+                            />
+
                         </div>
                         <div className="flex gap-3">
                             <input
