@@ -6,7 +6,8 @@ import { Transaction, TransactionType, IntervalType, EventsMap, TotalsMap, Editi
 import DateModal from './DateModal';
 import { useApi } from '../utils/api';
 import LogoutButton from './LogoutButton';
-import { isValid, format } from 'date-fns'
+import useFullWeekdayNames from '../utils/useFullWeekdayNames';
+
 
 const CustomCalendar: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -217,6 +218,8 @@ const CustomCalendar: React.FC = () => {
         );
     };
 
+    useFullWeekdayNames()
+
     return (
         <div className="min-h-screen px-4 py-6">
             <div className="relative flex items-center justify-center mb-6">
@@ -264,10 +267,6 @@ const CustomCalendar: React.FC = () => {
                         inline
                         renderDayContents={(_, date) => date ? renderDayContent(date) : null}
                         calendarClassName="!w-full !max-w-full custom-datepicker"
-                        formatWeekDay={(date) => {
-                            console.log('Formatting week day for:', date);
-                            return isValid(date) ? format(date, 'EEEE') : '';
-                        }}
                     />
                 </div>
                 <DateModal isOpen={isModalOpen} onClose={handleCloseModal}>
