@@ -213,9 +213,11 @@ const CustomCalendar: React.FC = () => {
 
     return (
         <div className="min-h-screen px-4 py-6">
-            <div className="flex flex-col lg:flex-row gap-8">
-                <h2 className="text-3xl font-bold mb-6 text-center font-sans">Means Budget Planner</h2>
-                <LogoutButton />
+            <div className="relative flex items-center justify-center mb-6">
+                <h2 className="text-3xl font-bold text-center font-sans">Means Budget Planner</h2>
+                <div className="absolute right-0">
+                    <LogoutButton />
+                </div>
             </div>
             <div className="flex flex-col lg:flex-row gap-8">
                 <div className="w-full max-w-none">
