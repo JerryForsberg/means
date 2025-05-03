@@ -6,7 +6,6 @@ import { Transaction, TransactionType, IntervalType, EventsMap, TotalsMap, Editi
 import DateModal from './DateModal';
 import { useApi } from '../utils/api';
 import LogoutButton from './LogoutButton';
-import { format } from 'date-fns';
 
 const CustomCalendar: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
