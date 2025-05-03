@@ -85,7 +85,19 @@ button:focus-visible {
   width: 100% !important;
 }
 
-.custom-datepicker .reacr-datepicker__day-names {
+.custom-datepicker .react-datepicker__day-names {
   width: 100% !important;
   max-width: none !important;
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.custom-datepicker .react-datepicker__day-name {
+  font-weight: 500;
+  color: #646cff;
+  text-align: center;
+  width: 100%;
+  padding: 0.5rem;
+  margin: 1rem 10rem;
 }
