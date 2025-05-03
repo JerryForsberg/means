@@ -262,7 +262,7 @@ const CustomCalendar: React.FC = () => {
                         inline
                         renderDayContents={(_, date) => date ? renderDayContent(date) : null}
                         calendarClassName="!w-full !max-w-full custom-datepicker"
-                        formatWeekDay={(date) => format(date, 'EEEE')}
+                        useWeekdaysShort={false}
                     />
                 </div>
                 <DateModal isOpen={isModalOpen} onClose={handleCloseModal}>
