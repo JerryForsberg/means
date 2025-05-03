@@ -245,6 +245,16 @@ const CustomCalendar: React.FC = () => {
                             </div>
                         </div>
                     )}
+                    {isLoading && (
+                        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                            <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+                                <h2 className="text-lg font-bold mb-2">Data Being Retrieved</h2>
+                                <p className="text-sm text-gray-700">
+                                    The Data is Loading. This can take up to 1 minute. Thank you for your patience.
+                                </p>
+                            </div>
+                        </div>
+                    )}
                     <DatePicker
                         selected={null}
                         openToDate={new Date()}
