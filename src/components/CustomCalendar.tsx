@@ -140,6 +140,8 @@ const CustomCalendar: React.FC = () => {
             .catch(console.error);
     }, []);
 
+
+
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -262,7 +264,10 @@ const CustomCalendar: React.FC = () => {
                         inline
                         renderDayContents={(_, date) => date ? renderDayContent(date) : null}
                         calendarClassName="!w-full !max-w-full custom-datepicker"
-                        formatWeekDay={(date) => isValid(date) ? format(date, 'EEEE') : ''}
+                        formatWeekDay={(date) => {
+                            console.log('Formatting week day for:', date);
+                            return isValid(date) ? format(date, 'EEEE') : '';
+                        }}
                     />
                 </div>
                 <DateModal isOpen={isModalOpen} onClose={handleCloseModal}>
