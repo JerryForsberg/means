@@ -6,6 +6,7 @@ import { Transaction, TransactionType, IntervalType, EventsMap, TotalsMap, Editi
 import DateModal from './DateModal';
 import { useApi } from '../utils/api';
 import LogoutButton from './LogoutButton';
+import { format } from 'date-fns';
 
 const CustomCalendar: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -15,6 +16,7 @@ const CustomCalendar: React.FC = () => {
     const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | null>(null);
     const [showDisclaimer, setShowDisclaimer] = useState(false);
     const { createTransaction, deleteTransaction, getAllTransactions, updateTransaction } = useApi();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleDateChange = (date: Date | null) => {
         setSelectedDate(date);
@@ -129,9 +131,11 @@ const CustomCalendar: React.FC = () => {
     }, [selectedKey, eventsMap, recurringTransactionMap]);
 
     useEffect(() => {
+        setIsLoading(true)
         getAllTransactions()
             .then((data) => {
                 setAllTransactions(data);
+                setIsLoading(false);
             })
             .catch(console.error);
     }, []);
@@ -248,6 +252,7 @@ const CustomCalendar: React.FC = () => {
                         inline
                         renderDayContents={(_, date) => date ? renderDayContent(date) : null}
                         calendarClassName="!w-full !max-w-full custom-datepicker"
+                        formatWeekDay={(date) => format(date, 'EEEE')}
                     />
                 </div>
                 <DateModal isOpen={isModalOpen} onClose={handleCloseModal}>
