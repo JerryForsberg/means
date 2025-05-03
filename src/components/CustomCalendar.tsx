@@ -5,6 +5,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { Transaction, TransactionType, IntervalType, EventsMap, TotalsMap, EditingTransaction, NewTransactionInput } from '../types';
 import DateModal from './DateModal';
 import { useApi } from '../utils/api';
+import LogoutButton from './LogoutButton';
 
 const CustomCalendar: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -213,6 +214,7 @@ const CustomCalendar: React.FC = () => {
     return (
         <div className="min-h-screen px-4 py-6">
             <h2 className="text-3xl font-bold mb-6 text-center font-sans">Means Budget Planner</h2>
+            <LogoutButton />
             <div className="flex flex-col lg:flex-row gap-8">
                 <div className="w-full max-w-none">
                     {showDisclaimer && (
